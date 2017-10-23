@@ -10,11 +10,13 @@ import stranger_client
 from neopixel import *
 
 LED_COUNT = 50
-GPIO_PIN = 10
+GPIO_PIN = 18
 LED_FREQ_HZ = 800000
 LED_DMA = 5
-LED_BRIGHTNESS = 127
+LED_BRIGHTNESS = 255
 LED_INVERT = False
+LED_CHANNEL = 0
+LED_STRIP = ws.WS2811_STRIP_RGB   # Strip type and colour ordering
 
 record_file = open("/home/pi/Desktop/stranger things/messages.txt", "a+")
 
@@ -22,7 +24,8 @@ CHAR_IDX = {'A': 0, 'B': 2, 'C': 3, 'D': 5, 'E': 7, 'F': 9, 'G': 11, 'H': 13, 'I
             'M': 25, 'N': 23, 'O': 21, 'P': 19, 'Q': 18, 'R': 36, 'S': 37, 'T': 39, 'U': 40, 'V': 42, 'W': 44, 'X': 46,
             'Y': 48, 'Z': 49, ' ': "NONE", '!': "FLASH", '*': "CREEP"}
 
-strip = Adafruit_NeoPixel(LED_COUNT, GPIO_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS)
+strip = Adafruit_NeoPixel(LED_COUNT, GPIO_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL, LED_STRIP)
+#strip = Adafruit_NeoPixel(LED_COUNT, GPIO_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS)
 strip.begin()
 strip.show()
 
@@ -34,11 +37,12 @@ def rand_color():
 def color_of(i):
     random.seed(i)
     rgb = colorsys.hsv_to_rgb(random.random(), 1, 1)
-    return int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255)
+    return 200, int(rgb[1] * 255), int(rgb[2] * 255)
+    #return (0,250,250)
 
 
 def set_color(led, c):
-    strip.setPixelColor(led, Color(*c))
+    strip.setPixelColorRGB(led, c[0], c[1], c[2])
 
 
 def set_all(color):
@@ -58,6 +62,20 @@ def creep(n):
         strip.show()
         time.sleep(1)
 
+def clearAll():
+    for i in range(0, LED_COUNT):
+        set_all((0, 0, 0))
+
+def testAll():
+    clearAll()
+    for i in range(0, 50):
+        print("setting color for {}".format(i))
+        set_color(i, (0, 0, 0))
+        time.sleep(1)
+        set_color(i, (255, 0, 0))
+        strip.show()
+        time.sleep(2)
+        set_color(i, (0, 0, 0))
 
 def flash(n):
     for i in range(0, n):
@@ -75,7 +93,7 @@ def display(msg):
     global displaying
     displaying = True
     for c in msg:
-        set_all((0, 0, 0))
+        clearAll()
         if c.upper() in CHAR_IDX:
             i = CHAR_IDX[c.upper()]
             if i == "NONE":
@@ -91,6 +109,7 @@ def display(msg):
             set_all((0, 0, 0))
             strip.show()
             time.sleep(.2)
+    flash(2)
     time.sleep(1)
     displaying = False
 
@@ -136,8 +155,9 @@ t0 = Thread(target=listen_on_console, args=("",))
 t1 = Thread(target=listen_on_client, args=())
 t2 = Thread(target=clear_errors, args=())
 
-t0.start()
-t1.start()
-t2.start()
+#t0.start()
+#t1.start()
+#t2.start()
 
+display("test test test")
 # listen_on_client()
