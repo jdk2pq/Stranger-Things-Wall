@@ -12,12 +12,13 @@ LED_COUNT = 50
 GPIO_PIN = 18
 LED_FREQ_HZ = 800000
 LED_DMA = 5
-LED_BRIGHTNESS = 255
+LED_BRIGHTNESS = 15
 LED_INVERT = False
 LED_CHANNEL = 0
 LED_STRIP = ws.WS2811_STRIP_RGB  # Strip type and colour ordering
 
 displaying = False
+build_iter = 1
 
 record_file = open("/home/pi/Desktop/stranger things/messages.txt", "a+")
 
@@ -50,7 +51,8 @@ CHAR_IDX = {
     'Z': 1,
     ' ': "NONE",
     '!': "FLASH",
-    '*': "CREEP"
+    '*': "CREEP",
+    '@': "ALPHABET"
 }
 
 strip = Adafruit_NeoPixel(LED_COUNT, GPIO_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL, LED_STRIP)
@@ -59,20 +61,31 @@ strip.show()
 
 
 def rand_color():
-    return get_new_color(random.random(), False)
+    return get_new_color(random.random())
 
 
-def get_new_color(i, include_blue):
+def get_new_color(i):
     random.seed(i)
-    # blue channel doesn't work well with my lights when lighting up a single LED
-    if include_blue:
-        return random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+    rand = random.randint(0, 6)
+    if rand == 0:
+        return 0, 0, 255
+    elif rand == 1:
+        return 0, 255, 255
+    elif rand == 2:
+        return 0, 255, 0
+    elif rand == 3:
+        return 255, 255, 0
+    elif rand == 4:
+        return 255, 0, 0
+    elif rand == 5:
+        return 255, 0, 255
     else:
-        return 0, random.randint(0, 255), random.randint(0, 255)
+        return 255, 255, 255
 
 
 def set_color(led, c):
-    strip.setPixelColorRGB(led, c[0], c[1], c[2])
+    strip.setPixelColorRGB(led + 1, c[0], 0, 0)
+    strip.setPixelColorRGB(led, 0, c[1], c[2])
 
 
 def set_all(color):
@@ -82,7 +95,7 @@ def set_all(color):
 
 def set_all_new_color():
     for i in range(0, LED_COUNT):
-        set_color(i, get_new_color(i, True))
+        set_color(i, get_new_color(i))
 
 
 def creep(n):
@@ -94,18 +107,27 @@ def creep(n):
 
 
 def build():
+    global build_iter
     clear_all()
     strip.show()
-    for i in range(0, LED_COUNT):
-        set_color(i, rand_color())
-        strip.show()
-        time.sleep(.3)
-    flash(2)
+    if build_iter % 2 == 0:
+        num_list = range(LED_COUNT, -1, -1)
+    else:
+        num_list = range(0, LED_COUNT)
+    for i in num_list:
+        if displaying:
+            break
+        else:
+            new_color = rand_color()
+            strip.setPixelColorRGB(i, new_color[0], new_color[1], new_color[2])
+            strip.show()
+            time.sleep(.3)
+    build_iter += 1
 
 
 def clear_all():
-    for i in range(0, LED_COUNT):
-        set_all((0, 0, 0))
+    set_all((0, 0, 0))
+    strip.show()
 
 
 def test_all():
@@ -133,6 +155,7 @@ def flash(n):
 def display(msg):
     global displaying
     displaying = True
+    time.sleep(1)
     for c in msg:
         clear_all()
         if c.upper() in CHAR_IDX:
@@ -143,8 +166,10 @@ def display(msg):
                 flash(3)
             elif i == "CREEP":
                 creep(50)
+            elif i == "ALPHABET":
+                alphabet()
             else:
-                set_color(i, get_new_color(i, False))
+                set_color(i, get_new_color(i))
             strip.show()
             time.sleep(1)
             clear_all()
@@ -189,16 +214,26 @@ def clear_errors():
     while True:
         if not displaying:
             clear_all()
+            build()
         time.sleep(2)
 
 
-t0 = Thread(target=listen_on_console, args=("",))
-t1 = Thread(target=listen_on_client, args=())
-t2 = Thread(target=clear_errors, args=())
+# borrowed from https://github.com/jgarff/rpi_ws281x/blob/master/python/examples/strandtest.py
+def color_wipe(color, wait_ms=800):
+    for i in range(strip.numPixels()):
+        strip.setPixelColor(i, color)
+        strip.show()
+        time.sleep(wait_ms / 1000.0)
 
-t0.start()
-# t1.start()
-# t2.start()
 
-display("test test test")
-# listen_on_client()
+def alphabet():
+    display("abcdefghijklmnopqrstuvwxyz")
+
+
+console_thread = Thread(target=listen_on_console, args=("",))
+client_thread = Thread(target=listen_on_client, args=())
+clear_errors_thread = Thread(target=clear_errors, args=())
+
+console_thread.start()
+client_thread.start()
+clear_errors_thread.start()
