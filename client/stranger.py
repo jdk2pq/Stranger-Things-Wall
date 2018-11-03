@@ -73,6 +73,9 @@ strip.begin()
 strip.show()
 voice = Voice()
 cancelled = False
+level = logging.DEBUG
+logging.basicConfig()
+logging.getLogger().setLevel(level)
 
 
 def start_checking():
@@ -184,7 +187,7 @@ def check():
     Download and process all sms messages from a Google Voice account.
     this is executed every 5 seconds
     """
-
+    global displaying
     # Parse and act on any new sms messages
     messages = voice.sms().messages
     for msg in extract_sms(voice.sms.html):
