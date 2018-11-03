@@ -231,9 +231,7 @@ def alphabet():
 
 
 console_thread = Thread(target=listen_on_console, args=("",))
-client_thread = Thread(target=listen_on_client, args=())
 clear_errors_thread = Thread(target=clear_errors, args=())
 
 console_thread.start()
-client_thread.start()
 clear_errors_thread.start()

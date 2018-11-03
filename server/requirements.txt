@@ -2,3 +2,5 @@ flask
 connexion
 gevent
 urllib3
+BeautifulSoup
+googlevoice
